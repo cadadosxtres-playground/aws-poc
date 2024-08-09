@@ -7,7 +7,7 @@ def list_aws_accounts(profile_name: str) -> list:
 
     try:
         # Create a client for the AWS Organizations service
-        client = boto3.client('organizations')
+        client = session.client('organizations')
 
         # Initialize a list to store account information
         accounts = []
