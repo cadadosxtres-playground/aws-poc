@@ -1,7 +1,8 @@
 import boto3
 import argparse
+import pandas as pd
 
-def list_aws_accounts(profile_name: str) -> list:
+def list_aws_accounts(profile_name: str) -> pd.DataFrame:
     # Create a boto3 session using the specified AWS SSO profile
     session = boto3.Session(profile_name=profile_name)
 
@@ -21,7 +22,9 @@ def list_aws_accounts(profile_name: str) -> list:
                     'AccountName': account['Name']
                 })
 
-        return accounts
+        df = pd.DataFrame.from_records(accounts)
+
+        return df
     except Exception as e:
         print(f'ERROR!!: Something unexpected happend. More information bellow:\n'
               f'{e}\n'
@@ -49,9 +52,7 @@ def main():
             if accounts is None:
                 raise Exception(f'ERROR!!! getting list of aws accounts')
             # Print account details
-            print(f'Account ID, Account Name')
-            for account in accounts:
-                print(f"{account['AccountId']}, {account['AccountName']}")
+            print(accounts)
     except Exception as e:
         print(f'{e}')
 
