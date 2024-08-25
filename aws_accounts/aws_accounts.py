@@ -4,10 +4,14 @@ import boto3
 import pandas as pd
 import os
 import json
+from typing import Optional
 
 class AWSAccounts:
-    def __init__(self, profile_name: str):
-        self.session = boto3.Session(profile_name=profile_name)
+    def __init__(self, profile_name: Optional[str] = None):
+        if profile_name:
+            self.session = boto3.Session(profile_name=profile_name)
+        else:
+            self.session = boto3.Session()
 
     # TODO creatinga a method to parse local config and return a list of dict with keys AccountId, ProfileName
     # TODO refactoring the validate sso method to validate upon the method that parses the config file
@@ -17,9 +21,7 @@ class AWSAccounts:
         user_sso_accounts = list(self.get_user_sso_accounts(user_profile_name=user_sso_profile)['accountId'])
         if not user_sso_accounts:
             raise Exception(f'ERROR!!: Unexpected error happened with profile {user_sso_profile}. '
-                      f'Please, check out that you have the SSO profile {user_sso_profile} correctly configured\n'
-                      f'More information\n'
-                      f'{e}')
+                      f'Please, check out that you have the SSO profile {user_sso_profile} correctly configured')
         user_local_profiles = [ profile['AccountId'] for profile in self.get_sso_profiles()]
 
         ### Adding new two columns based on the user sso accounts and local profiles
@@ -45,6 +47,28 @@ class AWSAccounts:
         session = boto3.Session()
         return session.available_profiles
 
+    def list_credentials(self, aws_credentials_path:str = '~/.aws/credentials') -> pd.DataFrame:
+        aws_credentials_file = os.path.expanduser(aws_credentials_path)
+        config = configparser.ConfigParser()
+
+        try:
+            config.read(aws_credentials_file)
+            credentials = []
+            for section in config.sections():
+                credential = {}
+                credential['CredentialName'] = section
+                for secret in config[section].items():
+                    if 'key_id' in secret[0]:
+                        credential[secret[0]] = secret[1]
+                    else:
+                        credential[secret[0]] = 5*'*'
+                credentials.append(credential)
+            df = pd.DataFrame.from_records(credentials)
+            return df
+        except Exception as e:
+            print(f'ERROR!! Something un expected happened reading file {aws_credentials_path} '
+                  f'\nMore information here: '
+                  f'{e}')
 
     def get_sso_profiles(self, sso_config_path: str = '~/.aws/config') -> list:
         aws_config_path = os.path.expanduser(sso_config_path)
@@ -95,7 +119,7 @@ class AWSAccounts:
                   )
 
     def get_user_sso_accounts(self, user_profile_name: str) -> pd.DataFrame:
-        session = boto3.Session(profile_name=user_profile_name)
+        session = boto3.Session(profile_name=user_profile_name )
         client = session.client('sso')
         accessToken = self.__get_accesstoken()
         paginator = client.get_paginator('list_accounts')

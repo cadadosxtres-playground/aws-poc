@@ -1,6 +1,6 @@
-import boto3
+#!/usr/bin/env python3
+
 import argparse
-import pandas as pd
 from aws_accounts.aws_accounts import AWSAccounts
 
 
@@ -12,7 +12,7 @@ def arguments() -> object:
 
     ## Mutually excluded
     group = parser.add_mutually_exclusive_group(required=False)
-    group.add_argument('--user-profile', type=str, default='', help='A user profile to list all sso '
+    group.add_argument('--list-all-sso-accounts', type=str, default='', help='Provide a user profile to list all sso '
                                                                     'accounts related to the user profile')
     group.add_argument('--list-local-profiles', action='store_true',
                        help="Listing the local profiles configured\n"
@@ -22,6 +22,10 @@ def arguments() -> object:
     group.add_argument('--validate-sso', type=str,
                        help='Validate all sso user access upon organizations '
                             'sso and local profile. By default a USER SSO PROFILE NEEDS TO BE CONFIGURED')
+
+    # TODO refatoring the code to accept a string as credentials path
+    group.add_argument('--list-credentials', action='store_true', help='Listing all AWS credentials configured in a file path provided'
+                                                                                          '\n By defatul ~/.aws/credentials ')
 
     args = parser.parse_args()
     return args
@@ -38,18 +42,21 @@ def main():
 
             if accounts is None:
                 raise Exception(f'ERROR!!! getting list of aws aws_accounts')
-        if args.user_profile:
-            accounts = AWSAccounts(profile_name=args.profile).get_user_sso_accounts(user_profile_name=args.user_profile)
+        if args.list_all_sso_accounts:
+            accounts = AWSAccounts(profile_name=args.profile).get_user_sso_accounts(user_profile_name=args.list_all_sso_accounts)
         if args.list_local_profiles:
             accounts = AWSAccounts(profile_name=args.profile).get_local_profiles()
 
         if args.validate_sso:
             accounts = AWSAccounts(profile_name=args.profile).validate_sso(user_sso_profile=args.validate_sso)
 
+        if args.list_credentials:
+            accounts = AWSAccounts().list_credentials()
+
         # Print account details
         print(accounts)
     except Exception as e:
-        print(f'{e}')
+        print(f'Something unexpected has happened.\nMore information here:\n{e}')
 
 if __name__ == "__main__":
     main()
